@@ -98,13 +98,23 @@ struct ContentView: View {
         .sheet(isPresented: $showingHistory) {
             HistoryView(storageManager: storageManager, monthlyHours: monthlyHours, monthlySalary: monthlySalary)
         }
+        .onAppear {
+            // Проверяем, есть ли активный таймер при запуске приложения
+            if let startDate = storageManager.getActiveTimerStart() {
+                self.startDate = startDate
+                isTimerRunning = true
+                updateElapsedTime()
+                startTimer()
+            }
+        }
     }
     
     private func startTimer() {
         isTimerRunning = true
         startDate = Date()
+        storageManager.saveActiveTimerStart(startDate!)
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            elapsedTime += 1
+            updateElapsedTime()
         }
     }
     
@@ -116,10 +126,17 @@ struct ContentView: View {
         if let start = startDate {
             let visit = ToiletVisit(startDate: start, endDate: Date(), cost: currentCost)
             storageManager.addVisit(visit)
+            storageManager.clearActiveTimerStart()
             startDate = nil
         }
         
         elapsedTime = 0
+    }
+    
+    private func updateElapsedTime() {
+        if let start = startDate {
+            elapsedTime = Date().timeIntervalSince(start)
+        }
     }
     
     private func formatTime(_ timeInterval: TimeInterval) -> String {
